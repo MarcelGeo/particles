@@ -1,0 +1,14 @@
+* {
+    margin: 0px;
+    box-sizing: border-box;
+}
+
+main {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#particle-area {
+    background-color: black;
+}
