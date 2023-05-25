@@ -69,7 +69,7 @@ class GridSet {
         this.render()
     }
 
-    getParticlesAlpha(scale=0.04) {
+    getParticlesAlpha(scale=0.03) {
         const currCellSize = Math.floor(this.area.fontSize * scale);
         const particles = []
 
@@ -139,9 +139,11 @@ const area = new Area(
 const gridSet = new GridSet(area, 256, 1, "point");
 gridSet.render()
 gridSet.setZoom(-2)
-area.addText("Marcel Kocisek")
+area.addText("Blue particles")
 
 const particles = gridSet.getParticlesAlpha();
+
+// remove particles.forEach for only text displayed
 particles.forEach(element => {
     // element.moving()
     element.render()
