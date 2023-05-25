@@ -1,33 +1,40 @@
 class Area {
-    constructor(element, width, height) {
+    constructor(element, width, height, fontSize=100) {
         this.element = element;
         this.context = element.getContext('2d')
+        
         this.element.width = width;
         this.element.height = height;
+
+        this.fontSize = fontSize
+        this.context.font = fontSize + 'px Helvetica'
+    }
+
+    addText(text){
+        this.context.fillStyle = "red";
+        this.context.textAlign = "center";
+        this.context.fillText(text, this.element.width/2, this.element.height/2)
     }
 }
 
 class GridSet {
-    constructor(cellSize, area) {
+    constructor(area, cellSize, width=1, gridStyle="grid") {
         this.area = area;
         this.zoom = 1;
         this.cellSize = cellSize / this.zoom;
         this.cols = Math.ceil(area.element.width / this.cellSize)
         this.rows = Math.ceil(area.element.height / this.cellSize)
-        this.fontSize = 100 * this.zoom;
-        this.area.context.font = this.fontSize + "px Helvetica";
+        this.width = width
+        this.gridStyle = gridStyle
     }
 
-    _getZoom(){
-        return this.zoom
-    }
-
-    render(width, style="grid") {
+    render() {
         this.area.context.strokeStyle = "white"
         this.area.context.fillStyle = "white"
-        this.area.context.lineWidth = width
+        this.area.context.lineWidth = this.width
 
-        if (style === "grid") {
+        this.area.context.clearRect(0,0, this.area.element.width, this.area.element.height)
+        if (this.gridStyle === "grid") {
             for (let x = 0; x < this.cols; x++) {
                 this.area.context.beginPath()
                 this.area.context.moveTo(this.cellSize * x, 0) 
@@ -40,10 +47,10 @@ class GridSet {
                 this.area.context.lineTo(this.area.element.width, this.cellSize * y) 
                 this.area.context.stroke();
             }
-        } else if (style === "point")  {
+        } else if (this.gridStyle === "point")  {
             for (let x = 0; x < this.cols; x++) {
                 for (let y = 0; y < this.rows; y++) {
-                    this.area.context.fillRect(x*this.cellSize, y*this.cellSize, width, width)
+                    this.area.context.fillRect(x*this.cellSize, y*this.cellSize, this.width, this.width)
                 }
             }
         }
@@ -51,12 +58,75 @@ class GridSet {
 
     setZoom(zoom){
         this.zoom = zoom;
-        this.cellSize = this.cellSize / this.zoom;
+        this.cellSize = this.zoom < 0 ? this.cellSize / (this.zoom * -1)  : this.cellSize * this.zoom;
         this.cols = Math.ceil(this.area.element.width / this.cellSize)
         this.rows = Math.ceil(this.area.element.height / this.cellSize)
-        this.fontSize = 100 * this.zoom;
-        this.area.context.font = this.fontSize + "px Helvetica";
+        
+        const prevFont = this.area.context.font.split(' ');
+        const prevFontSize = prevFont[0].replace('px', '');
+        const newFontSize = Number(prevFontSize) + (10 * this.zoom);
+        this.area.context.font = newFontSize + 'px ' + prevFont[1];
         this.render()
+    }
+
+    getParticlesAlpha(scale=0.04) {
+        const currCellSize = Math.floor(this.area.fontSize * scale);
+        const particles = []
+
+        const pixels = this.area.context.getImageData(0, 0, this.area.element.width, this.area.element.height).data;
+        for (let y = 0; y < this.area.element.height; y+=currCellSize) {
+            for (let x = 0; x < this.area.element.width; x+=currCellSize) {
+                const pixelIndex = (y * this.area.element.width + x) * 4;
+                if (pixels[pixelIndex + 3] > 0) {
+                    // alpha
+                    particles.push(
+                        new Particle(new Point(x, y, this), "blue", currCellSize)
+                    )
+                }
+            }
+        }
+
+        return particles
+    }
+}
+
+class Point {
+    constructor(x, y, gridSet) {
+        this.x = x
+        this.y = y
+        this.treeX = Math.ceil(gridSet.cellSize / x)
+        this.treeY = Math.ceil(gridSet.cellSize / y)
+        this.gridSet = gridSet
+    }
+
+    move(toPoint) {
+        this.x = toPoint.x
+        this.y = toPoint.y
+        this.treeX = toPoint.treeX
+        this.treeY = toPoint.treeY
+    }
+}
+
+class Particle {
+    constructor(point, color, size) {
+        this.point = point;
+        this.originX = new Point(0, 0, this.point.gridSet);
+        this.originY = new Point(0, 0, this.point.gridSet);
+
+        this.color = color;
+        this.size = size
+    }
+
+    render() {
+        this.point.gridSet.area.context.fillStyle = this.color;
+        this.point.gridSet.area.context.fillRect(this.point.x, this.point.y, this.size, this.size)
+    }
+
+    moving() {
+        let x, y;
+        x += (this.originX - this.point.x)
+        y += (this.originY - this.point.y)
+        this.point.move(new Point(x, y, this.point.gridSet))
     }
 }
 
@@ -66,10 +136,18 @@ const area = new Area(
     globalThis.window.innerHeight
 );
 
-const gridSet = new GridSet(256, area);
-gridSet.render(1, "point")
-gridSet.setZoom(2)
+const gridSet = new GridSet(area, 256, 1, "point");
+gridSet.render()
+gridSet.setZoom(-2)
+area.addText("Marcel Kocisek")
 
-area.context.fillStyle = "red";
-area.context.textAlign = "center";
-area.context.fillText('Jeeej', area.element.width/2, area.element.height/2)
+const particles = gridSet.getParticlesAlpha();
+particles.forEach(element => {
+    // element.moving()
+    element.render()
+});
+
+
+
+
+
