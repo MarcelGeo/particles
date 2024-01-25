@@ -4,4 +4,6 @@
 
 Render rectangle particles from text in JS canvas.
 
+## Examples of usage
+
 Open /examples/simple-example.html.
